@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+:root {
+  --spacing: 0.25rem;
+
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
+
+  --color-blue-50: #eff6ff;
+  --color-blue-100: #dbeafe;
+  --color-blue-200: #bfdbfe;
+  --color-blue-300: #93c5fd;
+  --color-blue-500: #3b82f6;
+  --color-blue-600: #2563eb;
+  --color-blue-700: #1d4ed8;
+  --color-blue-800: #1e40af;
+  --color-blue-900: #1e3a8a;
+  --color-blue-950: #172554;
+
+  --color-emerald-50: #ecfdf5;
+  --color-emerald-100: #d1fae5;
+  --color-emerald-200: #a7f3d0;
+  --color-emerald-300: #6ee7b7;
+  --color-emerald-500: #10b981;
+  --color-emerald-600: #059669;
+  --color-emerald-700: #047857;
+  --color-emerald-800: #065f46;
+
+  --color-amber-50: #fffbeb;
+  --color-amber-100: #fef3c7;
+  --color-amber-200: #fde68a;
+  --color-amber-300: #fcd34d;
+  --color-amber-500: #f59e0b;
+  --color-amber-600: #d97706;
+  --color-amber-700: #b45309;
+  --color-amber-800: #92400e;
+}
+/* Shared listing actions: visible boundaries, comfortable targets and feedback. */
+.action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 48px;
+  min-width: 48px;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color 150ms, border-color 150ms, box-shadow 150ms;
+}
+.action-button-primary { color: #1e40af; background: #eff6ff; border-color: #bfdbfe; }
+.action-button-primary:hover { background: #dbeafe; border-color: #60a5fa; }
+.action-button-danger { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
+.action-button-danger:hover { background: #fee2e2; border-color: #f87171; }
+.action-button-secondary { color: #0f766e; background: #f0fdfa; border-color: #99f6e4; }
+.action-button-secondary:hover { background: #ccfbf1; border-color: #2dd4bf; }
+.action-button:focus-visible { outline: 2px solid #1e40af; outline-offset: 2px; }
+button:not(:disabled), .action-button { cursor: pointer; }
+button:not(:disabled):hover { box-shadow: 0 2px 5px rgb(15 23 42 / 14%); }
+button { transition: background-color 150ms, color 150ms, box-shadow 150ms; }
+
+.dp--theme-light {
+  --dp-primary-color: #1e40af;
+  --dp-primary-text-color: #ffffff;
+  --dp-text-color: #0f172a;
+  --dp-border-color: #cbd5e1;
+  --dp-border-color-hover: #1e40af;
+  --dp-border-color-focus: #1e40af;
+  --dp-hover-color: #eff6ff;
+  --dp-border-radius: 8px;
+  --dp-font-size: 1rem;
+  --dp-input-padding: 12px 30px 12px 40px;
+}
+.app-date-picker .dp--input {
+  box-sizing: border-box;
+  min-height: 48px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 16px;
+  padding: 10px 36px 10px 40px;
+}
+.app-date-picker .dp--input:hover { border-color: #94a3b8; }
+.app-date-picker .dp--input:focus { border-color: #1e40af; box-shadow: 0 0 0 2px #dbeafe; }
+.dp--menu { z-index: 1000; }
