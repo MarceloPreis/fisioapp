@@ -1,5 +1,7 @@
 # SITF — execução e segurança
 
+Para publicar uma instalação de validação com PostgreSQL/Storage Supabase e NestJS/Vue no Render gratuito, siga [o guia de deploy](docs/deploy-supabase.md). O modo de nuvem exige dados exclusivamente fictícios; a instalação clínica continua usando MinIO local.
+
 A aplicação principal está em `api/` (NestJS) e `web/` (Vue 3). Inclui pacientes, exercícios, prescrições, execuções, upload particionado, agenda local e listener opcional HL7 ADT^A01.
 
 ## Configuração

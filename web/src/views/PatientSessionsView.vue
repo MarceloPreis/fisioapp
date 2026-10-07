@@ -39,8 +39,15 @@ const expandedExerciseId = ref<string | null>(null)
 const executionNote = ref('')
 const isSubmitting = ref(false)
 const selectedVideo = ref<File | null>(null)
+const maxVideoBytes = ref<number | null>(null)
+const maxVideoMb = computed(() => maxVideoBytes.value === null ? null : maxVideoBytes.value / (1024 * 1024))
+const fetchVideoLimits = async () => {
+  const { data } = await api.get('/videos/limits')
+  if (!Number.isInteger(data.maxVideoBytes) || data.maxVideoBytes < 1) throw new Error('Não foi possível consultar o limite de vídeo.')
+  maxVideoBytes.value = data.maxVideoBytes
+}
 const uploadProgress = ref('')
-const onVideoSelected = (event: Event) => { selectedVideo.value = (event.target as HTMLInputElement).files?.[0] || null }
+// const onVideoSelected = (event: Event) => { selectedVideo.value = (event.target as HTMLInputElement).files?.[0] || null }
 
 // Tags rápidas de sensação para feedback clínico
 const quickFeedbackChips = [
@@ -290,7 +297,11 @@ const finishSession = async (isPartial = false) => {
     let videoObjectName: string | null = null
     if (selectedVideo.value) {
       const file = selectedVideo.value
-      if (file.size > 512 * 1024 * 1024) throw new Error('O vídeo deve ter até 512 MB.')
+      await fetchVideoLimits()
+      if (!file.size || file.size > maxVideoBytes.value!) {
+        uploadProgress.value = `Selecione um vídeo de até ${maxVideoMb.value} MB.`
+        return
+      }
       const chunkSize = 4 * 1024 * 1024
       const totalChunks = Math.ceil(file.size / chunkSize)
       const { data: upload } = await api.post('/videos/upload/init', { totalChunks })
@@ -358,6 +369,7 @@ const getYouTubeEmbedUrl = (url: string) => {
 
 onMounted(() => {
   fetchSessions()
+  fetchVideoLimits().catch(() => { uploadProgress.value = 'O limite do vídeo será consultado antes do envio.' })
 })
 </script>
 
@@ -754,11 +766,11 @@ onMounted(() => {
               </button>
             </div>
 
-            <label class="block text-base text-slate-900 mb-3">
-              Vídeo da execução (MP4, até 512 MB)
+            <!-- <label class="block text-base text-slate-900 mb-3">
+              Vídeo da execução (MP4<span v-if="maxVideoMb !== null">, até {{ maxVideoMb }} MB</span>)
               <input type="file" accept="video/mp4,.mp4" :disabled="isSubmitting" @change="onVideoSelected" class="block w-full min-h-12 mt-2" />
               <span role="status" aria-live="polite" class="text-slate-500">{{ uploadProgress }}</span>
-            </label>
+            </label> -->
             <textarea 
               v-model="executionNote" 
               rows="3" 

@@ -1,6 +1,8 @@
 import { Tenant } from './tenants/tenant.entity';
 import { PatientReport } from './patients/patient-report.entity';
-import { databaseEnvironment, environmentFiles } from './database/environment';
+import { environmentFiles } from './database/environment';
+import { databaseConnectionOptions } from './database/connection-options';
+import { HealthController } from './deployment/health.controller';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { AuditIntegrityService } from './audit/audit-integrity.service';
 import { Hl7Module } from './hl7/hl7.module';
@@ -36,30 +38,17 @@ import { Appointment } from './appointments/appointment.entity';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
+  controllers: [HealthController],
   providers: [AuditIntegrityService, { provide: APP_INTERCEPTOR, useClass: AuditInterceptor }],
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: environmentFiles }),
     TypeOrmModule.forRootAsync({
       useFactory: () => {
-        const database = databaseEnvironment();
-        if (!process.env.DATABASE_URL && !database.password) throw new Error('Configure DB_PASSWORD, POSTGRES_PASSWORD ou DATABASE_URL.');
-        if (process.env.DATABASE_URL) {
-          return {
-            type: 'postgres',
-            url: process.env.DATABASE_URL,
-            entities: [PatientReport, Tenant, AuditEvent, User, Patient, Category, Exercise, ExerciseRule, ExerciseCountRule, Session, SessionExercise, SessionExecution, ExecutionNote, Appointment],
-            synchronize: false,
-            ssl: process.env.DB_SSL === 'true'
-              ? { rejectUnauthorized: true }
-              : false,
-          };
-        }
         return {
           type: 'postgres',
-          ...database,
+          ...databaseConnectionOptions(),
           entities: [PatientReport, Tenant, AuditEvent, User, Patient, Category, Exercise, ExerciseRule, ExerciseCountRule, Session, SessionExercise, SessionExecution, ExecutionNote, Appointment],
           synchronize: false,
-          ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: true } : false,
         };
       },
     }),

@@ -17,6 +17,8 @@ import { JwtStrategy } from '../src/auth/jwt.strategy';
 import { getJwtSecret } from '../src/auth/jwt-secret';
 import { AuditInterceptor } from '../src/audit/audit.interceptor';
 import { AuditEvent } from '../src/audit/audit.entity';
+import { PatientReportsController } from '../src/patients/patient-reports.controller';
+import { PatientReportsService } from '../src/patients/patient-reports.service';
 
 const patientId = '11111111-1111-4111-8111-111111111111';
 const sessionId = '22222222-2222-4222-8222-222222222222';
@@ -25,15 +27,17 @@ describe('HTTP authorization (synthetic fixtures, no clinical database)', () => 
   let app: INestApplication;
   let jwt: JwtService;
   const audit = { insert: jest.fn(async () => ({})) };
+  const reports = { list: jest.fn(async () => ({ patient: { id: patientId, fullName: 'Synthetic' }, reports: [] })), create: jest.fn(async () => ({ id: sessionId, title: 'Synthetic', content: '**Observation**' })) };
   const repository = { findOne: async ({ where }: any) => ({ id: where.id, patientId: where.id === sessionId ? patientId : 'other', sessionExercises: [] }), find: jest.fn(async () => []) };
   const patients = { search: jest.fn(async () => [{ id: patientId, fullName: 'Synthetic' }]), findByUserId: async (id: string) => id === 'patient-user' ? { id: patientId } : null, findAll: async () => [], create: jest.fn(async () => ({ id: patientId })), getWeeklyPlan: jest.fn(async () => ({ patient: { id: patientId }, routines: [] })), saveWeeklyPlan: jest.fn(async (_id: string, dto: any) => dto) };
   beforeAll(async () => {
     const module = await Test.createTestingModule({
       imports: [PassportModule, JwtModule.register({ secret: getJwtSecret() })],
-      controllers: [PatientsController, SessionsController, ExecutionsController],
+      controllers: [PatientsController, PatientReportsController, SessionsController, ExecutionsController],
       providers: [JwtStrategy, AuditInterceptor,
         { provide: getRepositoryToken(AuditEvent), useValue: audit },
         { provide: PatientsService, useValue: patients },
+        { provide: PatientReportsService, useValue: reports },
         { provide: UsersService, useValue: { findById: async (id: string) => ({ id, tenantId, role: id === 'physio-user' ? 'PHYSIO' : 'PATIENT' }) } },
         { provide: SessionsService, useValue: new SessionsService(repository as any, {} as any) },
         { provide: ExecutionsService, useValue: { getSignedVideoUrl: async () => ({ url: 'http://localhost/synthetic' }) } },
@@ -59,6 +63,21 @@ describe('HTTP authorization (synthetic fixtures, no clinical database)', () => 
     expect(patients.search).toHaveBeenCalledWith('Synthetic', tenantId);
   });
   it('requires authentication', () => request(app.getHttpServer()).get('/api/v1/patients').expect(401));
+  it('restricts reports to therapists, validates Markdown and audits additions without contents', async () => {
+    const url = `/api/v1/patients/${patientId}/reports`;
+    await request(app.getHttpServer()).get(url).expect(401);
+    await request(app.getHttpServer()).get(url).set('Cookie', cookie('PATIENT')).expect(403);
+    await request(app.getHttpServer()).post(url).set('Cookie', cookie('PATIENT')).send({ title: 'Synthetic', content: '**Observation**' }).expect(403);
+    await request(app.getHttpServer()).get(url).set('Cookie', cookie('PHYSIO')).expect(200);
+    expect(reports.list).toHaveBeenCalledWith(patientId, tenantId);
+    for (const invalid of [{ title: ' ', content: 'Text' }, { title: 'Synthetic', content: ' ' }, { title: 'Synthetic', content: 'Text', tenantId }, { title: 'Synthetic', content: 'Text', authorId: patientId }]) await request(app.getHttpServer()).post(url).set('Cookie', cookie('PHYSIO')).send(invalid).expect(400);
+    expect(reports.create).not.toHaveBeenCalled();
+    await request(app.getHttpServer()).post(url).set('Cookie', cookie('PHYSIO')).send({ title: 'Synthetic', content: '**Observation**' }).expect(201);
+    expect(reports.create).toHaveBeenCalledWith(patientId, expect.objectContaining({ title: 'Synthetic', content: '**Observation**' }), expect.objectContaining({ userId: 'physio-user', tenantId }));
+    expect(audit.insert).toHaveBeenCalledWith(expect.objectContaining({ tenantId, action: 'POST:success', resourceId: sessionId }));
+    for (const [event] of audit.insert.mock.calls as any) expect(event.content).toBeUndefined();
+    await request(app.getHttpServer()).delete(`${url}/${sessionId}`).set('Cookie', cookie('PHYSIO')).expect(404);
+  });
   it('rejects tokens without a clinic or claiming another clinic', async () => {
     for (const claimedTenant of [undefined, '00000000-0000-4000-8000-000000000002']) {
       const token = jwt.sign({ sub: 'physio-user', role: 'PHYSIO', tenantId: claimedTenant });

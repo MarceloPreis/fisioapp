@@ -37,3 +37,10 @@ A identidade deve transmitir exclusividade clínica, sendo minimalista, focada n
 ## 5. Estrutura Modular
 O Web App destina-se ao painel administrativo. 
 A arquitetura visual primária é baseada em *Master Layout* composto por um **Menu Lateral (Sidebar)** abrigando as rotas (Dashboard, Pacientes, Prescrições, Auditoria) e um **Conteúdo Principal (Main Content)** desenhado predominantemente com Cards organizados em *CSS Grid* ou *Flexbox*.
+
+## 6. Formulários de Cadastro em Modal
+- Formulários de cadastro devem abrir em modal a partir da ação da listagem ou da tela de contexto. O cadastro de relatórios de evolução do paciente segue obrigatoriamente esse padrão; não deve aparecer como formulário inline no histórico.
+- Use fundo branco, cantos arredondados, sombra e backdrop slate-900/50. O cabeçalho deve conter título e botão de fechar; o rodapé deve conter Cancelar e a ação primária de salvar.
+- O modal deve ser responsivo, ter altura limitada à viewport e rolagem interna no conteúdo, mantendo cabeçalho e ações acessíveis.
+- Garanta nome acessível, foco inicial no primeiro campo, foco contido no modal e retorno à ação que o abriu. Escape deve solicitar fechamento, respeitando a confirmação de descarte de alterações.
+- Preserve o rascunho em caso de erro, confirme o descarte de texto não salvo e bloqueie fechamento e envio duplicado durante o salvamento.

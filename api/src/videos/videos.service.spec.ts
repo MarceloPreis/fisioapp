@@ -10,7 +10,7 @@ describe('Video uploads (synthetic bytes only)', () => {
   let storage: any;
   beforeEach(async () => {
     directory = path.join(process.cwd(), 'temp_uploads', `test-${randomUUID()}`);
-    storage = { bucket: 'videos', client: { fPutObject: jest.fn(async () => {}), statObject: jest.fn(async () => ({})) } };
+    storage = { maxVideoBytes: 512 * 1024 * 1024, uploadFile: jest.fn(async () => {}), assertObjectExists: jest.fn(async () => {}) };
     service = new VideosService(storage);
     Object.defineProperty(service, 'root', { value: directory });
     await service.onModuleInit();
@@ -33,7 +33,7 @@ describe('Video uploads (synthetic bytes only)', () => {
     await expect(service.completeUpload(uploadId, 'test.mp4', 'u', tenantId)).resolves.toMatchObject({ state: 'processing' });
     await (service as any).queue;
     await expect(service.status(uploadId, 'u', tenantId)).resolves.toMatchObject({ state: 'complete', videoObjectName: `tenants/${tenantId}/videos/u/${uploadId}.mp4` });
-    expect(storage.client.fPutObject).toHaveBeenCalledTimes(1);
+    expect(storage.uploadFile).toHaveBeenCalledTimes(1);
   });
   it('accepts identical retries and rejects conflicting chunks', async () => {
     const { uploadId } = await service.initUpload('u', 1, tenantId);
@@ -48,11 +48,11 @@ describe('Video uploads (synthetic bytes only)', () => {
     await service.completeUpload(uploadId, 'fake.mp4', 'u', tenantId);
     await (service as any).queue;
     await expect(service.status(uploadId, 'u', tenantId)).resolves.toMatchObject({ state: 'failed', videoObjectName: null });
-    expect(storage.client.fPutObject).not.toHaveBeenCalled();
+    expect(storage.uploadFile).not.toHaveBeenCalled();
   });
   it('does not bind another user video to an execution', async () => {
     await expect(service.assertObjectOwner(`videos/other/${randomUUID()}.mp4`, 'u', tenantId)).rejects.toThrow();
-    expect(storage.client.statObject).not.toHaveBeenCalled();
+    expect(storage.assertObjectExists).not.toHaveBeenCalled();
   });
   it('rejects another clinic even when the owner identifier matches', async () => {
     const otherTenant = '00000000-0000-4000-8000-000000000002';
@@ -61,6 +61,16 @@ describe('Video uploads (synthetic bytes only)', () => {
     await expect(service.saveChunk(uploadId, 0, Buffer.from('x'), 'u', otherTenant)).rejects.toThrow();
     await expect(service.completeUpload(uploadId, 'test.mp4', 'u', otherTenant)).rejects.toThrow();
     await expect(service.assertObjectOwner(`tenants/${otherTenant}/videos/u/${uploadId}.mp4`, 'u', tenantId)).rejects.toThrow();
-    expect(storage.client.statObject).not.toHaveBeenCalled();
+    expect(storage.assertObjectExists).not.toHaveBeenCalled();
+  });
+  it('enforces the provider limit before persisting a chunk and accepts a smaller retry', async () => {
+    storage.maxVideoBytes = 12;
+    const { uploadId } = await service.initUpload('u', 1, tenantId);
+    await expect(service.saveChunk(uploadId, 0, Buffer.alloc(13), 'u', tenantId)).rejects.toThrow('limite');
+    await expect(fs.access(path.join(directory, uploadId, '0'))).rejects.toThrow();
+    await service.saveChunk(uploadId, 0, Buffer.from('0000ftyp0000'), 'u', tenantId);
+    await service.completeUpload(uploadId, 'test.mp4', 'u', tenantId);
+    await (service as any).queue;
+    expect(storage.uploadFile).toHaveBeenCalledTimes(1);
   });
 });

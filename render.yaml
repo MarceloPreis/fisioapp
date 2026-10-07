@@ -1,0 +1,55 @@
+# Render runs NestJS + Vue; Supabase runs PostgreSQL + private Storage.
+services:
+  - type: web
+    name: sitf-validation
+    runtime: node
+    plan: free
+    branch: Supabase
+    buildCommand: npm --prefix api ci --include=dev && npm --prefix web ci --include=dev && npm --prefix api run build && npm --prefix web run build
+    startCommand: npm --prefix api run start:prod
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.0
+      - key: NODE_ENV
+        value: production
+      - key: SERVE_WEB
+        value: "true"
+      - key: VITE_API_URL
+        value: /api/v1
+      - key: STORAGE_PROVIDER
+        value: supabase
+      - key: CLOUD_VALIDATION_ONLY
+        value: "true"
+      - key: STORAGE_BUCKET
+        value: videos
+      - key: MAX_VIDEO_MB
+        value: "50"
+      - key: DB_SSL
+        value: "true"
+      - key: DB_POOL_SIZE
+        value: "5"
+      - key: DB_SYNCHRONIZE
+        value: "false"
+      - key: HL7_ENABLED
+        value: "false"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: DB_SSL_CA
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: SEED_ADMIN
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ADMIN_TENANT_ID
+        value: 00000000-0000-4000-8000-000000000001

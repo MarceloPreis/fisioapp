@@ -19,7 +19,9 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "migration:run": "typeorm-ts-node-commonjs migration:run -d src/database/data-source.ts",
+    "migration:run:prod": "typeorm migration:run -d dist/database/data-source.js",
     "test:tenant:db": "ts-node --project tsconfig.json test/tenant-database-check.ts",
+    "test:supabase:db": "node scripts/verify-supabase-db.cjs",
     "backup:database": "node scripts/backup-database.cjs",
     "migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/database/data-source.ts"
   },
@@ -31,6 +33,7 @@
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/typeorm": "^11.0.3",
+    "@supabase/supabase-js": "^2.117.3",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",

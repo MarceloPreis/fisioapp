@@ -7,6 +7,8 @@ import { InitUploadDto, ChunkDto, CompleteUploadDto } from './dto/upload.dto';
 @Controller('videos')
 export class VideosController {
   constructor(private readonly videosService: VideosService) {}
+  @Get('limits')
+  limits() { return this.videosService.limits; }
   @Post('upload/init')
   initUpload(@Body() body: InitUploadDto, @Request() req: any) { return this.videosService.initUpload(req.user.userId, body.totalChunks, req.user.tenantId); }
   @Post('upload/chunk')

@@ -13,6 +13,7 @@ export class VideosService implements OnModuleInit {
   private readonly root = path.resolve(process.cwd(), 'temp_uploads');
   private queue: Promise<void> = Promise.resolve();
   constructor(private readonly storageService: StorageService) {}
+  get limits() { return { maxVideoBytes: this.storageService.maxVideoBytes, chunkBytes: 4 * 1024 * 1024 }; }
   async onModuleInit() {
     await fs.mkdir(this.root, { recursive: true });
     for (const id of await fs.readdir(this.root)) {
@@ -70,7 +71,7 @@ export class VideosService implements OnModuleInit {
       }
       let size = data.length;
       for (const entry of await fs.readdir(this.directory(id))) if (/^\d+$/.test(entry)) size += (await fs.stat(path.join(this.directory(id), entry))).size;
-      if (size > 512 * 1024 * 1024) throw new BadRequestException('Video excede 512 MB.');
+      if (size > this.storageService.maxVideoBytes) throw new BadRequestException('Vídeo excede o limite configurado.');
       const temporary = `${destination}.part`;
       await fs.writeFile(temporary, data);
       await fs.rename(temporary, destination);
@@ -86,7 +87,7 @@ export class VideosService implements OnModuleInit {
       if (await fs.access(path.join(this.directory(id), 'chunk.lock')).then(() => true, () => false)) throw new BadRequestException('Chunk em processamento.');
       let size = 0;
       for (let i = 0; i < item.totalChunks; i++) size += (await fs.stat(path.join(this.directory(id), String(i)))).size;
-      if (size > 512 * 1024 * 1024) throw new BadRequestException('Vídeo excede 512 MB.');
+      if (size > this.storageService.maxVideoBytes) throw new BadRequestException('Vídeo excede o limite configurado.');
     } catch {
       await fs.rm(path.join(this.directory(id), 'complete.lock'), { force: true });
       throw new BadRequestException('Upload incompleto.');
@@ -105,7 +106,7 @@ export class VideosService implements OnModuleInit {
     requireTenant(tenantId);
     const match = /^tenants\/([^/]+)\/videos\/([^/]+)\/([0-9a-f-]+)\.mp4$/.exec(objectName);
     if (!match || match[1] !== tenantId || match[2] !== owner) throw new ForbiddenException();
-    await this.storageService.client.statObject(this.storageService.bucket, objectName).catch(() => { throw new BadRequestException('Vídeo indisponível.'); });
+    await this.storageService.assertObjectExists(objectName).catch(() => { throw new BadRequestException('Vídeo indisponível.'); });
   }
   private async assemble(id: string, item: Upload) {
     const directory = this.directory(id);
@@ -119,7 +120,7 @@ export class VideosService implements OnModuleInit {
       const header = Buffer.alloc(12);
       try { await handle.read(header, 0, 12, 0); } finally { await handle.close(); }
       if (header.toString('ascii', 4, 8) !== 'ftyp') throw new Error('Formato MP4 inválido');
-      await this.storageService.client.fPutObject(this.storageService.bucket, item.objectName!, finalPath, { 'Content-Type': 'video/mp4' });
+      await this.storageService.uploadFile(item.objectName!, finalPath);
       item.state = 'complete';
     } catch { item.state = 'failed'; }
     finally {

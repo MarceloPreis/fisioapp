@@ -169,7 +169,7 @@ onMounted(fetchPatients)
 
       <template #cell(actions)="{ item }">
         <div class="flex flex-wrap justify-end gap-3">
-          <RouterLink :to="`/patients/${item.id}/progress`" class="action-button action-button-primary min-h-12 gap-2 px-3" :aria-label="`Ver progresso de ${item.fullName}`" title="Ver progresso"><FileText class="h-4 w-4" aria-hidden="true" /><span>Ver progresso</span></RouterLink>
+          <RouterLink :to="`/patients/${item.id}/progress`" class="action-button action-button-primary min-h-12" :aria-label="`Ver progresso de ${item.fullName}`" title="Ver progresso"><FileText class="h-4 w-4" aria-hidden="true" /></RouterLink>
           <RouterLink :to="`/patients/${item.id}/plan`" class="action-button action-button-primary" aria-label="Plano Semanal" title="Plano Semanal"><CalendarDays class="h-4 w-4" aria-hidden="true" /></RouterLink>
           <button @click="openModal(item)" class="action-button action-button-primary" aria-label="Editar" title="Editar"><Pencil class="h-4 w-4" aria-hidden="true" /></button>
           <button @click="deletePatient(item.id)" class="action-button action-button-danger" aria-label="Excluir" title="Excluir"><Trash2 class="h-4 w-4" aria-hidden="true" /></button>

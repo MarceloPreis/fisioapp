@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute } from 'vue-router'
-import { ArrowLeft, FileText, Plus, Save } from 'lucide-vue-next'
+import { ArrowLeft, FileText, Plus, Save, X } from 'lucide-vue-next'
 import MainLayout from '../layouts/MainLayout.vue'
 import AppButton from '../components/AppButton.vue'
 import MarkdownContent from '../components/MarkdownContent.vue'
@@ -16,6 +16,12 @@ const reports = ref<Report[]>([])
 const loading = ref(true)
 const failed = ref(false)
 const composing = ref(false)
+const reportDialog = ref<HTMLDialogElement | null>(null)
+watch(composing, async open => {
+  await nextTick()
+  if (open) reportDialog.value?.showModal()
+  else document.getElementById('new-report-button')?.focus()
+})
 const saving = ref(false)
 const title = ref('')
 const content = ref('')
@@ -37,8 +43,16 @@ const load = async () => {
     if (version === requestVersion) failed.value = true
   } finally { if (version === requestVersion) loading.value = false }
 }
-const discard = async () => !dirty.value || await confirm({ title: 'Descartar relatório?', message: 'O texto ainda não foi salvo.', confirmLabel: 'Descartar', tone: 'danger' })
-const cancel = async () => { if (await discard()) { composing.value = false; title.value = ''; content.value = '' } }
+const discard = async () => {
+  if (!dirty.value) return true
+  // The shared confirmation must be reachable above the native dialog.
+  const wasOpen = reportDialog.value?.open
+  if (wasOpen) reportDialog.value?.close()
+  const accepted = await confirm({ title: 'Descartar relatório?', message: 'O texto ainda não foi salvo.', confirmLabel: 'Descartar', tone: 'danger' })
+  if (!accepted && wasOpen && composing.value) reportDialog.value?.showModal()
+  return accepted
+}
+const cancel = async () => { if (!saving.value && await discard()) { composing.value = false; title.value = ''; content.value = '' } }
 const canLeave = async () => !saving.value && await discard()
 onBeforeRouteLeave(canLeave)
 onBeforeRouteUpdate(canLeave)
@@ -69,12 +83,17 @@ const formatDate = (date: string) => new Date(date).toLocaleString('pt-BR', { da
     <template v-else-if="patient">
       <header class="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div><h2 class="text-2xl font-bold text-slate-900">{{ patient.fullName }}</h2><p class="mt-2 text-base text-slate-600">Laudos e observações que acompanham a evolução do paciente.</p></div>
-        <AppButton v-if="!composing" variant="primary" class="min-h-12" @click="composing = true; preview = false"><Plus aria-hidden="true" /> Novo relatório</AppButton>
+        <AppButton id="new-report-button" variant="primary" class="min-h-12" @click="composing = true; preview = false"><Plus aria-hidden="true" /> Novo relatório</AppButton>
       </header>
-      <form v-if="composing" @submit.prevent="save" class="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h3 class="mb-5 text-xl font-semibold text-slate-900">Novo relatório</h3>
+      <dialog v-if="composing" ref="reportDialog" aria-labelledby="report-dialog-title" aria-modal="true" class="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-3xl rounded-xl border border-slate-200 bg-white p-0 shadow-xl backdrop:bg-slate-900/50" @cancel.prevent="cancel">
+      <form @submit.prevent="save" class="flex max-h-[90dvh] flex-col">
+        <header class="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 px-6 py-4">
+          <h3 id="report-dialog-title" class="text-xl font-semibold text-slate-900">Novo relatório</h3>
+          <button type="button" :disabled="saving" @click="cancel" aria-label="Fechar novo relatório" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 focus-visible:outline-blue-800 disabled:opacity-50"><X class="h-5 w-5" aria-hidden="true" /></button>
+        </header>
+        <div class="overflow-y-auto px-6 py-5">
         <label for="report-title" class="mb-2 block font-medium text-slate-700">Título</label>
-        <input id="report-title" v-model="title" required maxlength="200" :disabled="saving" placeholder="Ex.: Avaliação inicial" class="mb-5 min-h-12 w-full rounded-lg border border-slate-300 px-3 text-base focus:outline-blue-800" />
+        <input id="report-title" v-model="title" autofocus required maxlength="200" :disabled="saving" placeholder="Ex.: Avaliação inicial" class="mb-5 min-h-12 w-full rounded-lg border border-slate-300 px-3 text-base focus:outline-blue-800" />
         <div class="mb-2 flex flex-wrap items-center justify-between gap-3">
           <label for="report-content" class="font-medium text-slate-700">Laudo ou observação</label>
           <button type="button" :disabled="saving" :aria-pressed="preview" @click="preview = !preview" class="min-h-12 rounded-lg px-3 font-semibold text-blue-800 hover:bg-blue-50">{{ preview ? 'Editar Markdown' : 'Pré-visualizar' }}</button>
@@ -82,8 +101,10 @@ const formatDate = (date: string) => new Date(date).toLocaleString('pt-BR', { da
         <textarea v-show="!preview" id="report-content" v-model="content" required maxlength="100000" rows="12" :disabled="saving" aria-describedby="markdown-help" placeholder="Descreva a avaliação, os achados e a evolução..." class="w-full rounded-lg border border-slate-300 p-3 font-mono text-base focus:outline-blue-800" />
         <div v-if="preview" class="min-h-48 rounded-lg border border-slate-200 p-4"><MarkdownContent v-if="content.trim()" :content="content" /><p v-else class="text-slate-500">Escreva o relatório para visualizar.</p></div>
         <p id="markdown-help" class="mt-3 text-base text-slate-600">Use # para títulos, **texto** para negrito e - para listas. O relatório salvo fica registrado no histórico; novas observações devem ser adicionadas em outro relatório.</p>
-        <div class="mt-6 flex flex-wrap justify-end gap-3"><AppButton :disabled="saving" @click="cancel" class="min-h-12">Cancelar</AppButton><AppButton type="submit" variant="primary" :disabled="saving || !title.trim() || !content.trim()" class="min-h-12"><Save aria-hidden="true" /> {{ saving ? 'Salvando...' : 'Salvar relatório' }}</AppButton></div>
+        </div>
+        <footer class="flex shrink-0 flex-wrap justify-end gap-3 border-t border-slate-200 px-6 py-4"><AppButton :disabled="saving" @click="cancel" class="min-h-12">Cancelar</AppButton><AppButton type="submit" variant="primary" :disabled="saving || !title.trim() || !content.trim()" class="min-h-12"><Save aria-hidden="true" /> {{ saving ? 'Salvando...' : 'Salvar relatório' }}</AppButton></footer>
       </form>
+      </dialog>
       <section aria-label="Histórico de relatórios" class="space-y-5">
         <div v-if="!reports.length" class="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center"><FileText class="mx-auto mb-4 h-10 w-10 text-teal-600" aria-hidden="true" /><h3 class="text-lg font-semibold text-slate-900">Nenhum relatório registrado</h3><p class="mt-2 text-base text-slate-600">Adicione o primeiro laudo ou observação para iniciar a evolução.</p></div>
         <article v-for="report in reports" :key="report.id" class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
