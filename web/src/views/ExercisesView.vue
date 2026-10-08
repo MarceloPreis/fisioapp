@@ -5,6 +5,8 @@ import MainLayout from '../layouts/MainLayout.vue'
 import DataTable from '../components/DataTable.vue'
 import AppButton from '../components/AppButton.vue'
 import api from '../utils/axios'
+import { useFeedback } from '../composables/useFeedback'
+const { toast } = useFeedback()
 
 interface Category {
   id: string
@@ -66,7 +68,11 @@ const availableJoints = [
   { id: 'RIGHT_ANKLE', name: 'Tornozelo Dir' },
 ]
 
+const listLoading = ref(false)
+
 const fetchData = async () => {
+  if (listLoading.value) return
+  listLoading.value = true
   try {
     const [exRes, catRes] = await Promise.all([
       api.get('/exercises'),
@@ -75,7 +81,9 @@ const fetchData = async () => {
     exercises.value = exRes.data
     categories.value = catRes.data
   } catch (error) {
-    console.error('Erro ao buscar dados:')
+    toast.error('Não foi possível carregar exercícios. Tente recarregar.')
+  } finally {
+    listLoading.value = false
   }
 }
 
@@ -236,6 +244,8 @@ onMounted(() => {
 
     <!-- Tabela de Exercícios usando DataTable -->
     <DataTable
+      :loading="listLoading"
+      @reload="fetchData"
       :items="exercises"
       :columns="[
         { key: 'title', label: 'Título' },

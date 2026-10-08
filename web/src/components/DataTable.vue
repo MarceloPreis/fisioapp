@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import LoadingShimmer from './LoadingShimmer.vue'
+import ReloadButton from './ReloadButton.vue'
 
 interface Column {
   key: string
@@ -8,12 +10,15 @@ interface Column {
 }
 
 const props = defineProps<{
+  loading?: boolean
   items: any[]
   columns: Column[]
   searchPlaceholder?: string
   searchFields?: string[] // Campos onde a busca será feita (ex: ['title', 'fullName'])
   itemsPerPage?: number
 }>()
+
+defineEmits<{ reload: [] }>()
 
 const perPage = props.itemsPerPage || 10
 const currentPage = ref(1)
@@ -40,6 +45,8 @@ const filteredItems = computed(() => {
 
 const totalPages = computed(() => Math.ceil(filteredItems.value.length / perPage) || 1)
 
+watch(totalPages, pages => { currentPage.value = Math.min(currentPage.value, pages) })
+
 const paginatedItems = computed(() => {
   const start = (currentPage.value - 1) * perPage
   return filteredItems.value.slice(start, start + perPage)
@@ -61,6 +68,7 @@ const handleSearch = () => {
 
 <template>
   <div class="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col">
+    <p role="status" class="sr-only">{{ loading ? 'Carregando registros...' : 'Carregamento concluído.' }}</p>
     <!-- Header: Search -->
     <div class="p-4 border-b border-slate-200 flex flex-wrap justify-start items-center gap-3 rounded-t-lg bg-slate-50">
       <div class="relative w-full min-w-0 xl:w-96">
@@ -76,6 +84,7 @@ const handleSearch = () => {
         />
       </div>
       
+      <ReloadButton :loading="loading" @reload="$emit('reload')" />
       <!-- Ações globais (slots) -->
       <div v-if="$slots['header-actions']" class="flex w-full flex-wrap items-center gap-3 xl:w-auto">
         <slot name="header-actions"></slot>
@@ -84,7 +93,7 @@ const handleSearch = () => {
 
     <!-- Table -->
     <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse">
+      <table :aria-busy="loading" class="w-full text-left border-collapse">
         <thead>
           <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 text-sm">
             <th 
@@ -97,7 +106,12 @@ const handleSearch = () => {
             </th>
           </tr>
         </thead>
-        <tbody>
+        <tbody v-if="loading" aria-hidden="true">
+          <tr v-for="row in 5" :key="row" class="border-b border-slate-100">
+            <td v-for="col in columns" :key="col.key" class="p-4"><LoadingShimmer class="my-2" :class="col.key === 'actions' ? 'w-20 ml-auto' : 'w-3/4'" /></td>
+          </tr>
+        </tbody>
+        <tbody v-else>
           <tr v-if="paginatedItems.length === 0">
             <td :colspan="columns.length" class="p-8 text-center text-slate-500">
               Nenhum registro encontrado.
@@ -125,7 +139,7 @@ const handleSearch = () => {
     </div>
 
     <!-- Footer: Pagination -->
-    <div class="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-sm text-slate-600">
+    <div v-if="!loading" class="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-sm text-slate-600">
       <div>
         Mostrando {{ paginatedItems.length === 0 ? 0 : (currentPage - 1) * perPage + 1 }} a {{ Math.min(currentPage * perPage, filteredItems.length) }} de {{ filteredItems.length }} registros
       </div>

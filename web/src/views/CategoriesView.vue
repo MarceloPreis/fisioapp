@@ -5,6 +5,8 @@ import MainLayout from '../layouts/MainLayout.vue'
 import DataTable from '../components/DataTable.vue'
 import AppButton from '../components/AppButton.vue'
 import api from '../utils/axios'
+import { useFeedback } from '../composables/useFeedback'
+const { toast } = useFeedback()
 
 interface Category {
   id: string
@@ -16,12 +18,18 @@ const isModalOpen = ref(false)
 const isLoading = ref(false)
 const currentCategory = ref<Partial<Category>>({ name: '' })
 
+const listLoading = ref(false)
+
 const fetchCategories = async () => {
+  if (listLoading.value) return
+  listLoading.value = true
   try {
     const response = await api.get('/categories')
     categories.value = response.data
   } catch (error) {
-    console.error('Erro ao buscar categorias:')
+    toast.error('Não foi possível carregar categorias. Tente recarregar.')
+  } finally {
+    listLoading.value = false
   }
 }
 
@@ -94,6 +102,8 @@ onMounted(fetchCategories)
 
     <!-- Tabela de Categorias usando DataTable -->
     <DataTable
+      :loading="listLoading"
+      @reload="fetchCategories"
       :items="categories"
       :columns="[
         { key: 'name', label: 'Nome da Categoria' },

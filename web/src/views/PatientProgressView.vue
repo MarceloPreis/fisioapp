@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import LoadingShimmer from '../components/LoadingShimmer.vue'
+import ReloadButton from '../components/ReloadButton.vue'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute } from 'vue-router'
 import { ArrowLeft, FileText, Plus, Save, X } from 'lucide-vue-next'
@@ -75,7 +77,11 @@ const formatDate = (date: string) => new Date(date).toLocaleString('pt-BR', { da
   <MainLayout>
     <template #title>Evolução do paciente</template>
     <AppButton to="/patients" class="mb-6 min-h-12"><ArrowLeft aria-hidden="true" /> Pacientes</AppButton>
-    <p v-if="loading" role="status" class="text-slate-600">Carregando evolução...</p>
+    <ReloadButton class="mb-6 ml-3" :loading="loading" :disabled="saving || composing" @reload="load" />
+    <div v-if="loading" role="status" aria-busy="true" class="space-y-4">
+      <span class="sr-only">Carregando evolução...</span>
+      <div v-for="row in 3" :key="row" class="space-y-4 rounded-xl border border-slate-200 bg-white p-6"><LoadingShimmer class="h-6 w-1/3" /><LoadingShimmer class="w-1/2" /><LoadingShimmer class="h-24" /></div>
+    </div>
     <div v-else-if="failed" role="alert" class="rounded-xl border border-red-200 bg-white p-6">
       <p class="mb-4 text-red-700">Não foi possível carregar a evolução deste paciente.</p>
       <AppButton @click="load" class="min-h-12">Tentar novamente</AppButton>

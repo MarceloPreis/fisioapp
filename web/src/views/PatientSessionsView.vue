@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import LoadingShimmer from '../components/LoadingShimmer.vue'
+import ReloadButton from '../components/ReloadButton.vue'
 import { ref, computed, onMounted } from 'vue'
 import PatientLayout from '../layouts/PatientLayout.vue'
 import { useAuthStore } from '../stores/auth'
@@ -406,8 +408,10 @@ onMounted(() => {
     </template>
 
     <!-- Estado de Carregamento -->
-    <div v-if="isLoading" style="text-align: center; padding: 60px 0; color: #64748b; font-size: 15px;">
-      Carregando sessões...
+    <div class="mb-4 flex justify-end"><ReloadButton :loading="isLoading" @reload="fetchSessions" /></div>
+    <div v-if="isLoading" role="status" aria-busy="true" class="space-y-4">
+      <span class="sr-only">Carregando sessões...</span>
+      <div v-for="row in 3" :key="row" class="space-y-4 rounded-xl border border-slate-200 bg-white p-6"><LoadingShimmer class="h-6 w-1/3" /><LoadingShimmer class="w-2/3" /><LoadingShimmer class="h-20" /></div>
     </div>
 
     <template v-else>

@@ -82,7 +82,11 @@ const filteredSessions = computed(() => {
   return result
 })
 
+const listLoading = ref(false)
+
 const fetchData = async () => {
+  if (listLoading.value) return
+  listLoading.value = true
   try {
     const [sessRes, exRes] = await Promise.all([
       api.get('/sessions'),
@@ -93,6 +97,8 @@ const fetchData = async () => {
   } catch (error) {
     console.error('Erro ao buscar dados:')
     toast.error('Erro ao carregar dados das sessões.')
+  } finally {
+    listLoading.value = false
   }
 }
 
@@ -208,6 +214,8 @@ onMounted(fetchData)
 
       <!-- Tabela de Sessões com DataTable -->
       <DataTable
+      :loading="listLoading"
+      @reload="fetchData"
         :items="filteredSessions"
         :columns="[
           { key: 'title', label: 'Título' },

@@ -33,7 +33,11 @@ const exercises = ref<Exercise[]>([])
 const isModalOpen = ref(false)
 const editingSession = ref<Session | null>(null)
 
+const listLoading = ref(false)
+
 const fetchData = async () => {
+  if (listLoading.value) return
+  listLoading.value = true
   try {
     const [tempRes, exRes] = await Promise.all([
       api.get('/sessions?isTemplate=true'),
@@ -44,6 +48,8 @@ const fetchData = async () => {
   } catch (error) {
     console.error('Erro ao buscar dados:')
     toast.error('Erro ao carregar modelos fixos.')
+  } finally {
+    listLoading.value = false
   }
 }
 
@@ -110,6 +116,8 @@ onMounted(fetchData)
 
     <!-- Tabela de Templates usando DataTable -->
     <DataTable
+      :loading="listLoading"
+      @reload="fetchData"
       :items="templates"
       :columns="[
         { key: 'title', label: 'Título' },

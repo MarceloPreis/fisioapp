@@ -38,12 +38,18 @@ const currentPatient = ref<{
   hasExistingUser: boolean
 }>({ fullName: '', medicalRecordNumber: '', birthDate: '', mobileAccess: false, email: '', password: '', hasExistingUser: false })
 
+const listLoading = ref(false)
+
 const fetchPatients = async () => {
+  if (listLoading.value) return
+  listLoading.value = true
   try {
     const response = await api.get('/patients')
     patients.value = response.data
   } catch (error) {
-    console.error('Erro ao buscar pacientes:')
+    toast.error('Não foi possível carregar pacientes. Tente recarregar.')
+  } finally {
+    listLoading.value = false
   }
 }
 
@@ -147,6 +153,8 @@ onMounted(fetchPatients)
 
     <!-- Tabela de Pacientes usando DataTable -->
     <DataTable
+      :loading="listLoading"
+      @reload="fetchPatients"
       :items="patients"
       :columns="[
         { key: 'fullName', label: 'Nome Completo' },
