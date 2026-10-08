@@ -15,7 +15,7 @@ describe('Storage providers (synthetic data, mocked remote services)', () => {
   beforeEach(() => {
     process.env = { ...originalEnv, STORAGE_PROVIDER: 'supabase', CLOUD_VALIDATION_ONLY: 'true',
       HL7_ENABLED: 'false', MAX_VIDEO_MB: '50', STORAGE_BUCKET: 'videos',
-      SUPABASE_URL: 'https://synthetic.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'synthetic-server-key' };
+      SUPABASE_URL: 'https://synthetic.supabase.co', SUPABASE_SECRET_KEY: '', SUPABASE_SERVICE_ROLE_KEY: 'synthetic-server-key' };
     bucket = {
       exists: jest.fn(async () => ({ data: true, error: null })),
       upload: jest.fn(async (_key, stream) => {
@@ -30,6 +30,12 @@ describe('Storage providers (synthetic data, mocked remote services)', () => {
     (createClient as jest.Mock).mockReturnValue(remote);
   });
   afterEach(() => { process.env = originalEnv; jest.clearAllMocks(); });
+
+  it('accepts the current server secret and prefers it over the legacy service role key', () => {
+    process.env.SUPABASE_SECRET_KEY = 'sb_secret_synthetic';
+    new StorageService();
+    expect(createClient).toHaveBeenCalledWith('https://synthetic.supabase.co', 'sb_secret_synthetic', expect.any(Object));
+  });
 
   it('refuses missing or public buckets without leaking provider error details', async () => {
     remote.storage.getBucket.mockResolvedValue({ data: { public: true }, error: null });

@@ -55,7 +55,7 @@ Após migrações futuras, atualize a lista de tabelas do script se necessário 
 1. Em **Storage**, crie `videos` com **Public bucket desativado**.
 2. Limite os arquivos a 50 MB e permita `video/mp4`.
 3. Copie a URL do projeto (origem HTTPS, sem `/storage/v1`) para `SUPABASE_URL`.
-4. Copie a chave administrativa de servidor `service_role` para `SUPABASE_SERVICE_ROLE_KEY`. Uma chave secreta de servidor compatível com o SDK também pode ser usada; não use chave anon/publishable.
+4. Copie a chave secreta de servidor (`sb_secret_...`) para `SUPABASE_SECRET_KEY`. A chave legada `service_role` também é aceita em `SUPABASE_SERVICE_ROLE_KEY`; a chave secreta tem precedência quando ambas existem. Não use chave anon/publishable.
 
 Não crie políticas públicas para o bucket. Uploads são autorizados pelo NestJS e enviados com o SDK oficial; a chave administrativa existe somente no backend. Links de reprodução expiram em até cinco minutos. A API rejeita iniciar se o bucket estiver ausente ou público.
 
@@ -70,7 +70,7 @@ Não crie políticas públicas para o bucket. Uploads são autorizados pelo Nest
 | `DATABASE_URL` | URI do usuário `sitf_runtime`, não do administrador |
 | `DB_SSL_CA` | CA PEM se necessária; deixe vazio se a cadeia já for confiável |
 | `SUPABASE_URL` | `https://<referência>.supabase.co` |
-| `SUPABASE_SERVICE_ROLE_KEY` | Chave de servidor do projeto |
+| `SUPABASE_SECRET_KEY` | Chave secreta de servidor do projeto |
 | `CORS_ORIGINS` | Origem HTTPS exata atribuída pelo Render, sem barra final |
 | `ADMIN_EMAIL` | Identificador de login do fisioterapeuta de demonstração |
 | `ADMIN_PASSWORD` | Senha inicial com pelo menos 12 caracteres |
