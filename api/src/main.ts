@@ -1,4 +1,5 @@
-import { RequestMethod, ValidationPipe } from '@nestjs/common';
+import { RequestMethod } from '@nestjs/common';
+import { PortugueseExceptionFilter, portugueseValidationPipe } from './common/portuguese-errors';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { configureWebHosting } from './deployment/web-hosting';
 import { NestFactory } from '@nestjs/core';
@@ -17,7 +18,8 @@ async function bootstrap() {
   });
   app.enableShutdownHooks();
   
-  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }));
+  app.useGlobalPipes(portugueseValidationPipe());
+  app.useGlobalFilters(new PortugueseExceptionFilter());
   app.enableCors({
     origin: (process.env.CORS_ORIGINS || 'http://localhost:5173').split(',').map(value => value.trim()),
     credentials: true,

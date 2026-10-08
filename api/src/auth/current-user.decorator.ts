@@ -7,6 +7,7 @@ export interface AuthenticatedUser {
   patientId?: string;
   name: string;
   email: string;
+  tokenVersion: number;
 }
 
 export function requireTenant(tenantId: string): string {

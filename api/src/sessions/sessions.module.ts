@@ -4,9 +4,10 @@ import { SessionsService } from './sessions.service';
 import { SessionsController } from './sessions.controller';
 import { Session } from './session.entity';
 import { SessionExercise } from './session-exercise.entity';
+import { SessionReview } from './session-review.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Session, SessionExercise])],
+  imports: [TypeOrmModule.forFeature([Session, SessionExercise, SessionReview])],
   controllers: [SessionsController],
   providers: [SessionsService],
   exports: [SessionsService],

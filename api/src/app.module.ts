@@ -28,6 +28,7 @@ import { ExerciseCountRule } from './exercises/exercise-count-rule.entity';
 import { Category } from './categories/category.entity';
 import { Session } from './sessions/session.entity';
 import { SessionExercise } from './sessions/session-exercise.entity';
+import { SessionReview } from './sessions/session-review.entity';
 import { SessionExecution } from './executions/execution.entity';
 import { ExecutionNote } from './executions/execution-note.entity';
 import { UsersService } from './users/users.service';
@@ -47,7 +48,7 @@ import { ConfigModule } from '@nestjs/config';
         return {
           type: 'postgres',
           ...databaseConnectionOptions(),
-          entities: [PatientReport, Tenant, AuditEvent, User, Patient, Category, Exercise, ExerciseRule, ExerciseCountRule, Session, SessionExercise, SessionExecution, ExecutionNote, Appointment],
+          entities: [PatientReport, Tenant, AuditEvent, User, Patient, Category, Exercise, ExerciseRule, ExerciseCountRule, Session, SessionExercise, SessionReview, SessionExecution, ExecutionNote, Appointment],
           synchronize: false,
         };
       },

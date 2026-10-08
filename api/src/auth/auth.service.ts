@@ -29,10 +29,54 @@ export class AuthService {
   }
 
   async login(user: any) {
-    const payload = { tenantId: requireTenant(user.tenantId), email: user.email, sub: user.id, role: user.role, patientId: user.patientId, name: user.name };
+    const payload = {
+      tenantId: requireTenant(user.tenantId),
+      email: user.email,
+      sub: user.id,
+      role: user.role,
+      patientId: user.patientId,
+      name: user.name,
+      tokenVersion: user.tokenVersion,
+    };
     return {
       access_token: this.jwtService.sign(payload),
       user,
+    };
+  }
+
+  async changePatientPassword(
+    authenticatedUser: import('./current-user.decorator').AuthenticatedUser,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    if (authenticatedUser.role !== 'PATIENT' || !authenticatedUser.patientId) {
+      throw new UnauthorizedException();
+    }
+
+    const tenantId = requireTenant(authenticatedUser.tenantId);
+    const patient = await this.patientsService.findByUserId(authenticatedUser.userId, tenantId);
+    if (!patient || patient.id !== authenticatedUser.patientId) {
+      throw new UnauthorizedException();
+    }
+
+    const updatedUser = await this.usersService.changePatientPassword(
+      authenticatedUser.userId,
+      tenantId,
+      patient.id,
+      currentPassword,
+      newPassword,
+    );
+
+    return {
+      access_token: this.jwtService.sign({
+        tenantId,
+        email: authenticatedUser.email,
+        sub: authenticatedUser.userId,
+        role: 'PATIENT',
+        patientId: patient.id,
+        name: authenticatedUser.name,
+        tokenVersion: updatedUser.tokenVersion,
+      }),
     };
   }
 }

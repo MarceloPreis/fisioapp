@@ -14,7 +14,7 @@ export class VideosController {
   @Post('upload/chunk')
   @UseInterceptors(FileInterceptor('chunk', { limits: { fileSize: 8 * 1024 * 1024, files: 1, fields: 2 } }))
   async uploadChunk(@Body() body: ChunkDto, @UploadedFile() chunk: Express.Multer.File, @Request() req: any) {
-    if (!chunk) throw new BadRequestException('Chunk obrigatério.');
+    if (!chunk) throw new BadRequestException('Parte do vídeo obrigatória.');
     await this.videosService.saveChunk(body.uploadId, body.chunkIndex, chunk.buffer, req.user.userId, req.user.tenantId);
     return { success: true };
   }

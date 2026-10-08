@@ -6,7 +6,7 @@ import DataTable from '../components/DataTable.vue'
 import AppButton from '../components/AppButton.vue'
 import api from '../utils/axios'
 import { useFeedback } from '../composables/useFeedback'
-const { toast } = useFeedback()
+const { toast, confirm } = useFeedback()
 
 interface Category {
   id: string
@@ -199,19 +199,20 @@ const saveExercise = async () => {
     closeModal()
   } catch (error) {
     console.error('Erro ao salvar exercício:')
-    alert('Erro ao salvar o exercício.')
+    toast.error('Erro ao salvar o exercício.')
   } finally {
     isLoading.value = false
   }
 }
 
 const deleteExercise = async (id: string) => {
-  if (!confirm('Deseja realmente excluir este exercício?')) return
+  if (!(await confirm({ title: 'Excluir exercício?', message: 'Deseja realmente excluir este exercício?', confirmLabel: 'Excluir', tone: 'danger' }))) return
   try {
     await api.delete(`/exercises/${id}`)
     await fetchData()
   } catch (error) {
     console.error('Erro ao deletar exercício:')
+    toast.error('Não foi possível excluir o exercício. Tente novamente.')
   }
 }
 

@@ -6,7 +6,7 @@ import DataTable from '../components/DataTable.vue'
 import AppButton from '../components/AppButton.vue'
 import api from '../utils/axios'
 import { useFeedback } from '../composables/useFeedback'
-const { toast } = useFeedback()
+const { toast, confirm } = useFeedback()
 
 interface Category {
   id: string
@@ -59,19 +59,20 @@ const saveCategory = async () => {
     closeModal()
   } catch (error) {
     console.error('Erro ao salvar categoria:')
-    alert('Erro ao salvar a categoria. O nome pode já existir.')
+    toast.error('Erro ao salvar a categoria. O nome pode já existir.')
   } finally {
     isLoading.value = false
   }
 }
 
 const deleteCategory = async (id: string) => {
-  if (!confirm('Deseja realmente excluir esta categoria?')) return
+  if (!(await confirm({ title: 'Excluir categoria?', message: 'Deseja realmente excluir esta categoria?', confirmLabel: 'Excluir', tone: 'danger' }))) return
   try {
     await api.delete(`/categories/${id}`)
     await fetchCategories()
   } catch (error) {
     console.error('Erro ao deletar categoria:')
+    toast.error('Não foi possível excluir a categoria. Tente novamente.')
   }
 }
 

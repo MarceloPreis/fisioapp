@@ -44,3 +44,8 @@ A arquitetura visual primária é baseada em *Master Layout* composto por um **M
 - O modal deve ser responsivo, ter altura limitada à viewport e rolagem interna no conteúdo, mantendo cabeçalho e ações acessíveis.
 - Garanta nome acessível, foco inicial no primeiro campo, foco contido no modal e retorno à ação que o abriu. Escape deve solicitar fechamento, respeitando a confirmação de descarte de alterações.
 - Preserve o rascunho em caso de erro, confirme o descarte de texto não salvo e bloqueie fechamento e envio duplicado durante o salvamento.
+
+## 7. Componentes de Filtro e Busca
+- **Padrão Visual:** Formulários de filtro (ex: filtragem de listas, tabelas ou relatórios) devem utilizar os componentes nativos do sistema ao invés de inputs HTML puros para garantir coesão visual e comportamental (ex: `AppButton`, `DateRangePicker`, `PatientSelect`).
+- **Labels:** Não utilize `<label>` soltos externamente aos componentes customizados que já possuem propriedade de label ou placeholder acessível interno (como `hide-label` ou `placeholder` do `PatientSelect`). Isso evita poluição visual e redundância.
+- **Layout:** Os filtros devem preferencialmente se apresentar de forma compacta (inline) usando flexbox com `flex-wrap`, `items-center` e gap apropriado, similar ao container de ações de um `<DataTable>` ou `<form class="flex flex-wrap items-center gap-3">`. Elementos não devem ocupar linhas inteiras desnecessariamente.

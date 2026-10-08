@@ -6,11 +6,35 @@ import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards, Request, Qu
 import { SessionsService } from './sessions.service';
 import { CreateSessionDto, UpdateSessionDto } from './dto/session.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ReviewQueueDto } from './dto/review-queue.dto';
+import { CreateSessionReviewDto } from './dto/create-session-review.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('sessions')
 export class SessionsController {
   constructor(private readonly sessionsService: SessionsService) {}
+
+  @Get('review-queue')
+  @UseGuards(PhysioGuard)
+  getReviewQueue(@Query() query: ReviewQueueDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.sessionsService.getReviewQueue(query, user.tenantId);
+  }
+
+  @Get(':id/reviews')
+  @UseGuards(PhysioGuard)
+  getReviews(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.sessionsService.getReviews(id, user.tenantId);
+  }
+
+  @Post(':id/reviews')
+  @UseGuards(PhysioGuard)
+  addReview(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: CreateSessionReviewDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.sessionsService.addReview(id, body, user);
+  }
 
   @Post()
   @UseGuards(PhysioGuard)

@@ -5,6 +5,9 @@ import { ref, computed, onMounted } from 'vue'
 import PatientLayout from '../layouts/PatientLayout.vue'
 import { useAuthStore } from '../stores/auth'
 import api from '../utils/axios'
+import { useFeedback } from '../composables/useFeedback'
+
+const { toast } = useFeedback()
 
 interface Exercise {
   id: string
@@ -348,7 +351,7 @@ const finishSession = async (isPartial = false) => {
     await fetchSessions()
   } catch (error) {
     console.error('Erro ao finalizar sessão:')
-    alert('Erro ao registrar conclusão da sessão. Tente novamente.')
+    toast.error('Erro ao registrar conclusão da sessão. Tente novamente.')
   } finally {
     isSubmitting.value = false
   }

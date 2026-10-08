@@ -22,7 +22,7 @@ export const useAuthStore = defineStore('auth', {
           ? message.join(' ')
           : message || (err.response
             ? 'Não foi possível realizar o login. Tente novamente.'
-            : 'Não foi possível conectar à API. Verifique se o backend está rodando.');
+            : 'Não foi possível conectar ao sistema. Verifique sua conexão e tente novamente.');
         throw err;
       } finally {
         this.isLoading = false;

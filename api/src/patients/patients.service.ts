@@ -54,7 +54,7 @@ export class PatientsService {
     return this.patientsRepository.manager.transaction(async manager => {
       const patient = manager.create(Patient, { tenantId: requireTenant(tenantId), fullName: dto.fullName, medicalRecordNumber: dto.medicalRecordNumber, birthDate: dto.birthDate });
       if (dto.mobileAccess) {
-        if (await manager.findOne(User, { where: { email: dto.email } })) throw new BadRequestException('E-mail já est? em uso.');
+        if (await manager.findOne(User, { where: { email: dto.email } })) throw new BadRequestException('E-mail já está em uso.');
         const user = await manager.save(User, manager.create(User, { tenantId: requireTenant(tenantId), name: dto.fullName, email: dto.email, passwordHash: await bcrypt.hash(dto.password!, 12), role: 'PATIENT' }));
         patient.userId = user.id;
       }
@@ -69,7 +69,7 @@ export class PatientsService {
       const patient = await manager.findOne(Patient, { where: { id, tenantId: requireTenant(tenantId) } });
       if (!patient) throw new NotFoundException('Paciente não encontrado.');
       if (dto.mobileAccess && !patient.userId) {
-        if (await manager.findOne(User, { where: { email: dto.email } })) throw new BadRequestException('E-mail já est? em uso.');
+        if (await manager.findOne(User, { where: { email: dto.email } })) throw new BadRequestException('E-mail já está em uso.');
         const user = await manager.save(User, manager.create(User, { tenantId: requireTenant(tenantId), name: dto.fullName || patient.fullName, email: dto.email, passwordHash: await bcrypt.hash(dto.password!, 12), role: 'PATIENT' }));
         patient.userId = user.id;
       }

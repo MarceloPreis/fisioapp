@@ -18,6 +18,9 @@ export class User extends TenantOwned {
   @Column({ default: 'PATIENT' })
   role: string;
 
+  @Column({ type: 'integer', default: 0 })
+  tokenVersion: number;
+
   @CreateDateColumn()
   createdAt: Date;
 }

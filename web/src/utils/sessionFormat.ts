@@ -19,6 +19,7 @@ export const formatRecurrence = (days?: number[] | null): string => {
 const STATUS_LABELS: Record<string, string> = {
   PENDENTE: 'Pendente',
   CONCLUIDO: 'Concluída',
+  PARCIAL: 'Parcial',
 }
 
 export const sessionStatusLabel = (status: string): string => STATUS_LABELS[status] ?? status

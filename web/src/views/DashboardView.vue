@@ -35,7 +35,7 @@ onMounted(fetchStats)
 
 <template>
   <MainLayout>
-    <template #title>Dashboard</template>
+    <template #title>Painel</template>
     <div class="mb-4 text-slate-500">
       <p class="font-medium">Indicadores dos últimos 7 dias</p>
     </div>

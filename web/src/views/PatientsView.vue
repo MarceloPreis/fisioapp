@@ -8,7 +8,7 @@ import AppButton from '../components/AppButton.vue'
 import WeeklyPlanPicker from '../components/WeeklyPlanPicker.vue'
 import api from '../utils/axios'
 import { useFeedback } from '../composables/useFeedback'
-const { toast } = useFeedback()
+const { toast, confirm } = useFeedback()
 
 interface User {
   id: string
@@ -104,9 +104,9 @@ const savePatient = async () => {
   } catch (error: any) {
     console.error('Erro ao salvar paciente:')
     if (error.response?.data?.message) {
-      alert(`Erro: ${error.response.data.message}`)
+      toast.error(`Erro: ${error.response.data.message}`)
     } else {
-      alert('Erro ao salvar o paciente. Verifique os dados e tente novamente.')
+      toast.error('Erro ao salvar o paciente. Verifique os dados e tente novamente.')
     }
   } finally {
     isLoading.value = false
@@ -114,7 +114,7 @@ const savePatient = async () => {
 }
 
 const deletePatient = async (id: string) => {
-  if (!confirm('Deseja realmente excluir este paciente?')) return
+  if (!(await confirm({ title: 'Excluir paciente?', message: 'Deseja realmente excluir este paciente?', confirmLabel: 'Excluir', tone: 'danger' }))) return
   try {
     await api.delete(`/patients/${id}`)
     await fetchPatients()

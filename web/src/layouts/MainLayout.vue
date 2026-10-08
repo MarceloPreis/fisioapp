@@ -56,6 +56,12 @@ const handleLogout = async () => {
           :class="route.path.startsWith('/templates') ? 'bg-blue-50 text-blue-800' : 'text-slate-700'">
           Modelos Fixos
         </RouterLink>
+        <RouterLink
+          to="/session-reviews"
+          class="block px-4 py-2 rounded-lg font-medium transition-colors"
+          :class="route.path.startsWith('/session-reviews') ? 'bg-blue-50 text-blue-800' : 'text-slate-700 hover:bg-slate-50'">
+          Revisões de Sessão
+        </RouterLink>
       </nav>
       <div class="p-4 border-t border-slate-200">
         <button @click="handleLogout" class="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 rounded-lg font-medium transition-colors">

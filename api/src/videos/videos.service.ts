@@ -27,12 +27,12 @@ export class VideosService implements OnModuleInit {
     this.queue = this.queue.then(() => this.assemble(id, item)).catch(async () => { item.state = 'failed'; await this.persist(id, item).catch(() => {}); });
   }
   private directory(id: string) {
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new BadRequestException('Upload inválido.');
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new BadRequestException('Envio inválido.');
     return path.join(this.root, id);
   }
   private async read(id: string): Promise<Upload> {
     const file = path.join(this.directory(id), 'metadata.json');
-    try { return JSON.parse(await fs.readFile(file, 'utf8')); } catch { throw new NotFoundException('Upload não encontrado.'); }
+    try { return JSON.parse(await fs.readFile(file, 'utf8')); } catch { throw new NotFoundException('Envio não encontrado.'); }
   }
   private async persist(id: string, item: Upload) { const temporary = path.join(this.directory(id), 'metadata.tmp'); await fs.writeFile(temporary, JSON.stringify(item)); await fs.rename(temporary, path.join(this.directory(id), 'metadata.json')); }
   private async owned(id: string, owner: string, tenantId: string) {
@@ -49,7 +49,7 @@ export class VideosService implements OnModuleInit {
       if (item && Date.now() - item.createdAt > 24 * 3600000 && item.state !== 'processing') { await fs.rm(this.directory(id), { recursive: true, force: true }); continue; }
       if (item?.owner === owner && ['pending', 'processing'].includes(item.state)) active++;
     }
-    if (active >= 3) throw new BadRequestException('Limite de uploads simultâneos atingido.');
+    if (active >= 3) throw new BadRequestException('Limite de envios simultâneos atingido.');
     const uploadId = randomUUID();
     await fs.mkdir(this.directory(uploadId), { recursive: true });
     await this.persist(uploadId, { tenantId, owner, totalChunks, state: 'pending', createdAt: Date.now() });
@@ -57,16 +57,16 @@ export class VideosService implements OnModuleInit {
   }
   async saveChunk(id: string, index: number, data: Buffer, owner: string, tenantId: string) {
     const item = await this.owned(id, owner, tenantId);
-    if (item.state !== 'pending' || !Number.isInteger(index) || index < 0 || index >= item.totalChunks || !data?.length || data.length > 8 * 1024 * 1024) throw new BadRequestException('Chunk inválido.');
-    if (await fs.access(path.join(this.directory(id), 'complete.lock')).then(() => true, () => false)) throw new BadRequestException('Upload em conclusão.');
+    if (item.state !== 'pending' || !Number.isInteger(index) || index < 0 || index >= item.totalChunks || !data?.length || data.length > 8 * 1024 * 1024) throw new BadRequestException('Parte do vídeo inválida.');
+    if (await fs.access(path.join(this.directory(id), 'complete.lock')).then(() => true, () => false)) throw new BadRequestException('Envio em conclusão.');
     const destination = path.join(this.directory(id), String(index));
     const lockPath = path.join(this.directory(id), 'chunk.lock');
-    const lock = await fs.open(lockPath, 'wx').catch(() => { throw new BadRequestException('Chunk em processamento.'); });
+    const lock = await fs.open(lockPath, 'wx').catch(() => { throw new BadRequestException('Parte do vídeo em processamento.'); });
     await lock.close();
     try {
-      if (await fs.access(path.join(this.directory(id), 'complete.lock')).then(() => true, () => false)) throw new BadRequestException('Upload em processamento.');
+      if (await fs.access(path.join(this.directory(id), 'complete.lock')).then(() => true, () => false)) throw new BadRequestException('Envio em processamento.');
       if (await fs.access(destination).then(() => true, () => false)) {
-        if (!(await fs.readFile(destination)).equals(data)) throw new BadRequestException('Chunk já recebido com conteúdo diferente.');
+        if (!(await fs.readFile(destination)).equals(data)) throw new BadRequestException('Parte do vídeo já recebida com conteúdo diferente.');
         return;
       }
       let size = data.length;
@@ -84,13 +84,13 @@ export class VideosService implements OnModuleInit {
     const lock = await fs.open(path.join(this.directory(id), 'complete.lock'), 'wx').catch(() => { throw new BadRequestException('Conclusão já solicitada.'); });
     await lock.close();
     try {
-      if (await fs.access(path.join(this.directory(id), 'chunk.lock')).then(() => true, () => false)) throw new BadRequestException('Chunk em processamento.');
+      if (await fs.access(path.join(this.directory(id), 'chunk.lock')).then(() => true, () => false)) throw new BadRequestException('Parte do vídeo em processamento.');
       let size = 0;
       for (let i = 0; i < item.totalChunks; i++) size += (await fs.stat(path.join(this.directory(id), String(i)))).size;
       if (size > this.storageService.maxVideoBytes) throw new BadRequestException('Vídeo excede o limite configurado.');
     } catch {
       await fs.rm(path.join(this.directory(id), 'complete.lock'), { force: true });
-      throw new BadRequestException('Upload incompleto.');
+      throw new BadRequestException('Envio incompleto.');
     }
     item.state = 'processing';
     item.objectName = `tenants/${tenantId}/videos/${owner}/${id}.mp4`;

@@ -265,7 +265,7 @@ onMounted(fetchData)
               <Pencil class="w-4 h-4" aria-hidden="true" />
             </button>
             <button
-              v-if="item.status === 'CONCLUIDO'"
+              v-if="item.status === 'CONCLUIDO' || item.status === 'PARCIAL'"
               type="button"
               @click="openResults(item)"
               class="action-button action-button-secondary"

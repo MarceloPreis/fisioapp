@@ -1,4 +1,4 @@
-import { requireTenant } from '../auth/current-user.decorator';
+import { requireTenant, type AuthenticatedUser } from '../auth/current-user.decorator';
 import { Patient } from '../patients/patient.entity';
 import { Exercise } from '../exercises/exercise.entity';
 import { In } from 'typeorm';
@@ -9,6 +9,9 @@ import { Session } from './session.entity';
 import { SessionExercise } from './session-exercise.entity';
 import { SessionExecution } from '../executions/execution.entity';
 import { CreateSessionDto, UpdateSessionDto } from './dto/session.dto';
+import { SessionReview } from './session-review.entity';
+import { CreateSessionReviewDto } from './dto/create-session-review.dto';
+import { ReviewQueueDto } from './dto/review-queue.dto';
 
 @Injectable()
 export class SessionsService {
@@ -17,7 +20,114 @@ export class SessionsService {
     private sessionsRepository: Repository<Session>,
     @InjectRepository(SessionExercise)
     private sessionExercisesRepository: Repository<SessionExercise>,
+    @InjectRepository(SessionReview)
+    private sessionReviewsRepository: Repository<SessionReview>,
   ) {}
+
+  async getReviewQueue(query: ReviewQueueDto, tenantId: string) {
+    const scopedTenantId = requireTenant(tenantId);
+    if (query.from && query.to && query.from > query.to) {
+      throw new BadRequestException('A data inicial deve ser anterior ou igual à data final.');
+    }
+
+    const sessionsQuery = this.sessionsRepository.createQueryBuilder('session')
+      .innerJoinAndSelect('session.patient', 'patient')
+      .leftJoinAndSelect('session.sessionExercises', 'sessionExercise')
+      .leftJoinAndSelect('sessionExercise.exercise', 'exercise')
+      .select([
+        'session.id', 'session.title', 'session.status', 'session.scheduledDate', 'session.createdAt',
+        'patient.id', 'patient.fullName',
+        'sessionExercise.id', 'sessionExercise.sets', 'sessionExercise.reps', 'sessionExercise.completedSets',
+        'exercise.id', 'exercise.title',
+      ])
+      .where('session.tenantId = :tenantId', { tenantId: scopedTenantId })
+      .andWhere('session.isTemplate = false')
+      .andWhere('session.status IN (:...statuses)', { statuses: ['CONCLUIDO', 'PARCIAL'] })
+      .orderBy('session.scheduledDate', 'ASC')
+      .addOrderBy('session.createdAt', 'ASC')
+      .addOrderBy('session.id', 'ASC');
+    if (query.from) {
+      sessionsQuery.andWhere('COALESCE(session.scheduledDate, session.createdAt::date) >= :fromDate', {
+        fromDate: query.from,
+      });
+    }
+    if (query.to) {
+      sessionsQuery.andWhere('COALESCE(session.scheduledDate, session.createdAt::date) <= :toDate', {
+        toDate: query.to,
+      });
+    }
+    if (query.patientId) sessionsQuery.andWhere('session.patientId = :patientId', { patientId: query.patientId });
+
+    const sessions = await sessionsQuery.getMany();
+    if (!sessions.length) return { items: [] };
+
+    const reviews = await this.sessionReviewsRepository.find({
+      where: { tenantId: scopedTenantId, sessionId: In(sessions.map(session => session.id)) },
+      order: { createdAt: 'DESC', id: 'DESC' },
+    });
+    const latestBySession = new Map<string, SessionReview>();
+    for (const review of reviews) if (!latestBySession.has(review.sessionId)) latestBySession.set(review.sessionId, review);
+
+    const items = sessions.flatMap(session => {
+      const latest = latestBySession.get(session.id);
+      if (query.reviewStatus === 'PENDING' && latest) return [];
+      if (query.reviewStatus !== 'ALL' && query.reviewStatus !== 'PENDING' && latest?.disposition !== query.reviewStatus) return [];
+      return [{
+        id: session.id,
+        title: session.title,
+        status: session.status,
+        scheduledDate: session.scheduledDate,
+        createdAt: session.createdAt,
+        patient: { id: session.patient.id, fullName: session.patient.fullName },
+        sessionExercises: (session.sessionExercises || []).map(exercise => ({
+          id: exercise.id,
+          sets: exercise.sets,
+          reps: exercise.reps,
+          completedSets: exercise.completedSets,
+          exercise: { id: exercise.exercise.id, title: exercise.exercise.title },
+        })),
+        latestReview: latest ? this.toReviewResponse(latest) : null,
+      }];
+    });
+    return { items };
+  }
+
+  async getReviews(id: string, tenantId: string) {
+    await this.findOne(id, tenantId);
+    const reviews = await this.sessionReviewsRepository.find({
+      where: { tenantId: requireTenant(tenantId), sessionId: id },
+      order: { createdAt: 'ASC', id: 'ASC' },
+    });
+    return { items: reviews.map(review => this.toReviewResponse(review)) };
+  }
+
+  async addReview(id: string, dto: CreateSessionReviewDto, user: AuthenticatedUser) {
+    if (user.role !== 'PHYSIO') throw new ForbiddenException();
+    const tenantId = requireTenant(user.tenantId);
+    const session = await this.findOne(id, tenantId);
+    if (session.isTemplate || !['CONCLUIDO', 'PARCIAL'].includes(session.status)) {
+      throw new BadRequestException('A sessão não está disponível para revisão.');
+    }
+    const review = await this.sessionReviewsRepository.save(this.sessionReviewsRepository.create({
+      tenantId,
+      sessionId: session.id,
+      reviewerId: user.userId,
+      reviewerName: user.name,
+      disposition: dto.disposition,
+      note: dto.note?.trim() || null,
+    }));
+    return this.toReviewResponse(review);
+  }
+
+  private toReviewResponse(review: SessionReview) {
+    return {
+      id: review.id,
+      disposition: review.disposition,
+      note: review.note,
+      createdAt: review.createdAt,
+      reviewer: { id: review.reviewerId, name: review.reviewerName },
+    };
+  }
 
   async findAll(tenantId: string, patientId?: string, isTemplate: boolean = false): Promise<Session[]> {
     const where: any = { tenantId: requireTenant(tenantId), isTemplate };
@@ -133,6 +243,9 @@ export class SessionsService {
 
   async remove(id: string, tenantId: string): Promise<void> {
     const session = await this.findOne(id, tenantId);
+    if (await this.sessionReviewsRepository.count({ where: { tenantId: requireTenant(tenantId), sessionId: id } })) {
+      throw new BadRequestException('Sessão possui revisões; o histórico deve ser preservado.');
+    }
     await this.sessionsRepository.remove(session);
   }
 }
